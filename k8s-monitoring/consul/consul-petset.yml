@@ -1,0 +1,65 @@
+kind: PetSet
+apiVersion: apps/v1alpha1
+metadata:
+  name: consul
+spec:
+  serviceName: "consul"
+  replicas: 1
+  selector:
+    matchLabels:
+      app: consul
+      dc: aws-east
+  template:
+    metadata:
+      labels:
+        app: consul
+        dc: aws-east
+      annotations:
+        pod.alpha.kubernetes.io/initialized: "true"
+    spec:
+      terminationGracePeriodSeconds: 0
+      containers:
+        - name: consul
+          image: consul:v0.6.4
+          args:
+            - "agent"
+            - "-dc=east"
+            - "-client=0.0.0.0"
+            - "-config-dir=/opt/consul"
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/consul
+            - name: config-volume
+              mountPath: /opt/consul
+          ports:
+            - name: ui-port
+              containerPort: 8500
+            - name: alt-port
+              containerPort: 8400
+            - name: udp-port
+              containerPort: 53
+            - name: https-port
+              containerPort: 443
+            - name: http-port
+              containerPort: 8080
+            - name: serflan
+              containerPort: 8301
+            - name: serfwan
+              containerPort: 8302
+            - name: consuldns
+              containerPort: 8600
+            - name: server
+              containerPort: 8300
+        - name: consul-exporter
+          image: prom/consul-exporter:master
+          args:
+          - "-consul.server=localhost:8500"
+          ports:
+          - name: exporter
+            containerPort: 9107
+      volumes:
+        - name: data
+          emptyDir: {}
+        - name: config-volume
+          configMap:
+            name: consul-config
